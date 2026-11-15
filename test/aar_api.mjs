@@ -1,5 +1,6 @@
 // ทดสอบระบบหลังบ้านของ AAR อย่างเดียว (ไม่มีเบราว์เซอร์): การ Login ผ่านระบบกลาง สิทธิ์ทุกข้อ การนำข้อมูลเดิมเข้า รูปภาพ
 // ใช้: EADMIN_DIR=../eadmin APP_DIR=../app node test/aar_api.mjs
+import vm from 'node:vm';
 import { site, sessions, aarPost, passOf } from './aar_serve.mjs';
 const bad = [];
 const check = (name, cond, got) => { console.log((cond ? 'ok   ' : 'FAIL ') + name + (cond ? '' : '  → ' + String(JSON.stringify(got)).slice(0, 400))); if (!cond) bad.push(name); };
@@ -9,7 +10,7 @@ const sync = (k) => aarPost({ action: 'sync', pass: P[k], ver: 0 });
 const write = (k, ops) => aarPost({ action: 'write', pass: P[k], ops });
 
 /* ---------- ติดตั้ง + นำข้อมูลเดิมเข้า ---------- */
-check('setup ran: tabs made, keepWarm set, said what it imported', site.logs.some((l) => /นำข้อมูลเดิมเข้าแล้ว: 5 ภารกิจ 8 ข้อ/.test(l)) && !!site.books[site.DBID].MISSIONS && !!site.books[site.DBID].ITEMS_TG && !!site.books[site.DBID].LOG, site.logs);
+check('setup ran: tabs made, keepWarm set, said what it imported', site.logs.some((l) => /นำข้อมูลเดิมเข้าแล้ว: 5 ภารกิจ 7 ข้อ · GSE 1 ข้อ/.test(l)) && !!site.books[site.DBID].MISSIONS && !!site.books[site.DBID].ITEMS_TG && !!site.books[site.DBID].LOG, site.logs);
 const d0 = sync('chan').data;
 const mBy = (start) => d0.missions.find((m) => m.start === start);
 check('import: dates read (เดือนเดียว, ข้ามเดือน 30 ต.ค. - 3 พ.ย.69) and fiscal years', mBy('2026-05-08') && mBy('2026-05-08').end === '2026-05-16' && mBy('2026-10-30') && mBy('2026-10-30').end === '2026-11-03' && mBy('2026-10-30').fy === 2570 && mBy('2026-05-08').fy === 2569, d0.missions.map((m) => [m.start, m.end, m.fy]));
@@ -17,10 +18,10 @@ check('import: type guessed (นายก, ผบ.ทอ., เดโชชัย
 check('import: the longest title of the same mission kept, route kept as written', mBy('2026-08-26').title === 'รับ-ส่ง ผบ.ทอ.พร้อมคณะ เยือนต่างประเทศ (ทดสอบ)' && mBy('2026-08-26').route.join('|') === 'ดอนเมือง|เมืองก|ดอนเมือง');
 const it = (txt) => d0.items.find((i) => i.issue === txt);
 check('import: rows with a recommendation only join the issue above', it('ข้อทดสอบ นบ. มีแนวทางต่อ') && it('ข้อทดสอบ นบ. มีแนวทางต่อ').rec === 'แนวทาง 2\nแนวทาง 2 ต่อ\nแนวทาง 2 ต่ออีก', it('ข้อทดสอบ นบ. มีแนวทางต่อ'));
-check('import: ภาพรวม → นักบิน, without the one already in นักบิน', it('ข้อจากภาพรวม ก') && it('ข้อจากภาพรวม ก').dept === 'NB' && d0.items.filter((i) => i.issue === 'ข้อทดสอบ นบ. สอง').length === 1);
+check('import: ภาพรวม with an airport → GSE issue of that mission at that station; the one already in a department skipped', !d0.items.some((i) => /ภาพรวม ก/.test(i.issue)) && d0.gissues.some((g) => /ภาพรวม ก/.test(g.issue) && g.fix === 'แนวทาง ก') && d0.events.some((e) => e.st === 'WBSB' && e.mid === mBy('2026-08-26').id) && d0.items.filter((i) => i.issue === 'ข้อทดสอบ นบ. สอง').length === 1, [d0.gissues, d0.events]);
 check('import: a mission row with no issue (สื่อสาร) makes no item; only-recommendation rows make one item', !d0.items.some((i) => i.dept === 'SO' && i.mid === mBy('2026-08-26').id) && d0.items.filter((i) => i.dept === 'PB').length === 1 && /แนวทางอย่างเดียว 2/.test(d0.items.find((i) => i.dept === 'PB').rec));
 check('import: departments with nothing to say are confirmed (old missions)', d0.acks.some((a) => a.mid === mBy('2026-05-08').id && a.dept === 'KSO') && !d0.acks.some((a) => a.mid === mBy('2026-05-08').id && a.dept === 'NB'));
-check('import: items sit in their department tab', site.books[site.DBID].ITEMS_CH.rows.length === 2 && site.books[site.DBID].ITEMS_NB.rows.length === 5);
+check('import: items sit in their department tab', site.books[site.DBID].ITEMS_CH.rows.length === 2 && site.books[site.DBID].ITEMS_NB.rows.length === 4);
 check('setup put the MC names (from SETUP, not from GitHub) in LISTS', JSON.stringify(d0.lists.mcNames) === JSON.stringify(['น.ต. ทดสอบหนึ่ง', 'ร.อ. ทดสอบสอง']), d0.lists);
 check('setup again does not import twice', (() => { require_setup(); return sync('chan').data.missions.length === 5; })());
 function require_setup() { site.ctx.setup(); }
@@ -76,7 +77,7 @@ check('Viewer opens a GSE record and adds an issue (everyone may)', !w6.error &&
 const w7 = write('kitti', [{ c: 'gissues', op: 'put', row: { id: 'gT1', eid: 'eT1', cat: 'GPU', issue: 'GPU มาช้า (แก้)', min: 12 } }]);
 const g7 = w7.data && w7.data.gissues.find((g) => g.id === 'gT1');
 check('another department edits it: first author kept, last editor recorded', g7 && g7.by === 'น.ต. ภูมิ สาธิตพงศ์' && g7.editedBy === 'ร.อ. กิตติ สาธิตกุล' && g7.editedDept === 'SO', g7);
-check('GSE issues sit in GSE_ISSUES', site.books[site.DBID].GSE_ISSUES.rows.length === 2);
+check('GSE issues sit in GSE_ISSUES', site.books[site.DBID].GSE_ISSUES.rows.length === 3);
 
 /* ---------- ความเห็น ---------- */
 check('Viewer: no comment on a department item, a comment on a GSE issue', ce(write('phum', [{ c: 'comments', op: 'put', row: { id: 'c1', t: 'i', tid: 'iA', text: 'x' } }])) === 'forbidden' && !write('phum', [{ c: 'comments', op: 'put', row: { id: 'c2', t: 'g', tid: 'gT1', text: 'ความเห็น GSE' } }]).error);
@@ -105,6 +106,23 @@ const pr = aarPost({ action: 'photo', pass: P.kitti, id: ph });
 check('the photo is served to a signed-in person', pr.src && pr.src.startsWith('data:image/png;base64,'), pr.error);
 check('a Drive file not used by this system is not served', ce(aarPost({ action: 'photo', pass: P.kitti, id: 'drive:' + 'A'.repeat(30) })) === 'not_found');
 check('a photo of another item cannot be borrowed', ce(write('thana', [{ c: 'items', op: 'put', row: item('iQ', 'NB', { photos: [ph] }) }])) === 'forbidden');
+
+/* ---------- ยศแยกจากชื่อ ---------- */
+const mr = site.books[site.DBID].MISSIONS.rows, head = mr[0];
+const col = (k) => head.indexOf(k);
+const rowT1 = mr.find((r) => r[0] === 'mT1');
+check('sheet: rank and name of the recorder in separate columns', rowT1[col('ยศ ผู้บันทึก')] === 'ร.อ.' && rowT1[col('ชื่อ-สกุล ผู้บันทึก')] === 'กิตติ สาธิตกุล', [head, rowT1]);
+write('chan', [{ c: 'missions', op: 'put', row: Object.assign({}, NEWM, { mc: ['น.ต.วีรวิท'], amc: ['ร.อ.ศุภกร', 'ร.ท. พิชญะ'] }) }]);
+const rowT1b = site.books[site.DBID].MISSIONS.rows.find((r) => r[0] === 'mT1');
+check('sheet: MC / ผู้ช่วย MC rank and name in separate columns (typed without a space too)', rowT1b[col('ยศ MC')] === 'น.ต.' && rowT1b[col('ชื่อ MC')] === 'วีรวิท' && rowT1b[col('ยศ ผู้ช่วย MC')] === 'ร.อ., ร.ท.' && rowT1b[col('ชื่อ ผู้ช่วย MC')] === 'ศุภกร, พิชญะ', rowT1b);
+check('page data: MC tidied to "ยศ ชื่อ"', sync('phum').data.missions.find((m) => m.id === 'mT1').mc[0] === 'น.ต. วีรวิท');
+check('usernames of other people are not sent to the page; own is', sync('phum').data.missions.find((m) => m.id === 'mT1').byUser === '' && sync('kitti').data.missions.find((m) => m.id === 'mT1').byUser === 'kitti_s');
+const li = site.books[site.DBID].ITEMS_NB.rows; const ih = li[0];
+check('items: rank / name of the author in separate columns', li.some((r) => r[ih.indexOf('ยศ ผู้กรอก')] === 'น.อ.' && r[ih.indexOf('ชื่อ-สกุล ผู้กรอก')] === 'ธนา ทดลองกิจ'));
+const lgr = site.books[site.DBID].LOG.rows; const lh = lgr[0];
+check('history: rank / name separate', lgr.some((r) => r[lh.indexOf('ยศ')] === 'น.อ.' && r[lh.indexOf('ชื่อ-สกุล')] === 'ธนา ทดลองกิจ'));
+check('ownership by username: a mission still belongs to the one who opened it after a promotion', vm.runInContext(`(() => { const m = load_(true).missions.find((x) => x.id === 'mT1');
+  return isMine_(Object.assign({}, m, { by: 'น.ท. กิตติ สาธิตกุล' }), 'by', { user: 'kitti_s', name: 'น.ท. กิตติ สาธิตกุล' }) && !isMine_(m, 'by', { user: 'thana_t', name: m.by }); })()`, site.ctx));
 
 console.log('errors: ' + JSON.stringify(bad));
 process.exit(bad.length ? 1 : 0);

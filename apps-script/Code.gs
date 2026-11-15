@@ -53,19 +53,46 @@ const PROXY_FROM = ['NB', 'CH', 'SO', 'KSO', 'PB'];
 /* ====================== ตาราง ====================== */
 // แต่ละชุดข้อมูล: แท็บ (หรือแท็บตามฝ่าย/ชนิด), คอลัมน์อ่านง่าย · คอลัมน์สุดท้ายคือ json เสมอ
 const T = {
-  missions: { tab: () => 'MISSIONS', cols: ['id', 'fy', 'type', 'sub', 'title', 'start', 'end', 'ac', 'route', 'mc', 'amc', 'depts', 'by', 'at', 'deleted_at'] },
-  items: { tab: (r) => 'ITEMS_' + r.dept, tabs: DEPTS.map((d) => 'ITEMS_' + d), cols: ['id', 'mid', 'fy', 'dept', 'issue', 'rec', 'photos', 'repeatOf', 'proxy', 'cby', 'cdept', 'by', 'at', 'ver', 'deleted_at'] },
-  acks: { tab: () => 'ACKS', cols: ['id', 'mid', 'fy', 'dept', 'by', 'at', 'deleted_at'] },
-  comments: { tab: () => 'COMMENTS', cols: ['id', 't', 'tid', 'text', 'by', 'dept', 'at', 'deleted_at'] },
-  events: { tab: (r) => (r.kind === 'CAT' ? 'CAT_EVENTS' : 'GSE_EVENTS'), tabs: ['GSE_EVENTS', 'CAT_EVENTS'], cols: ['id', 'kind', 'mid', 'fy', 'st', 'date', 'phase', 'leg', 'ft', 'meals', 'ac', 'pid', 'contact', 'rating', 'pay', 'by', 'dept', 'at', 'deleted_at'] },
-  gissues: { tab: (r, D) => (kindOfEvent_(D, r.eid) === 'CAT' ? 'CAT_ISSUES' : 'GSE_ISSUES'), tabs: ['GSE_ISSUES', 'CAT_ISSUES'], cols: ['id', 'eid', 'cat', 'issue', 'cause', 'min', 'fix', 'photos', 'by', 'dept', 'at', 'editedBy', 'editedDept', 'editedAt', 'deleted_at'] },
-  providers: { tab: () => 'PROVIDERS', cols: ['id', 'kind', 'st', 'name', 'contact', 'services', 'by', 'dept', 'at', 'deleted_at'] },
-  notes: { tab: () => 'NOTES', cols: ['id', 'kind', 'st', 'text', 'by', 'dept', 'at', 'deleted_at'] },
+  missions: { tab: () => 'MISSIONS', cols: ['id', 'fy', 'type', 'sub', 'title', 'start', 'end', 'ac', 'route', 'mc_rank', 'mc_name', 'amc_rank', 'amc_name', 'depts', 'by_rank', 'by_name', 'at', 'deleted_at'] },
+  items: { tab: (r) => 'ITEMS_' + r.dept, tabs: DEPTS.map((d) => 'ITEMS_' + d), cols: ['id', 'mid', 'fy', 'dept', 'issue', 'rec', 'photos', 'repeatOf', 'proxy', 'cby_rank', 'cby_name', 'cdept', 'by_rank', 'by_name', 'at', 'ver', 'deleted_at'] },
+  acks: { tab: () => 'ACKS', cols: ['id', 'mid', 'fy', 'dept', 'by_rank', 'by_name', 'at', 'deleted_at'] },
+  comments: { tab: () => 'COMMENTS', cols: ['id', 't', 'tid', 'text', 'by_rank', 'by_name', 'dept', 'at', 'deleted_at'] },
+  events: { tab: (r) => (r.kind === 'CAT' ? 'CAT_EVENTS' : 'GSE_EVENTS'), tabs: ['GSE_EVENTS', 'CAT_EVENTS'], cols: ['id', 'kind', 'mid', 'fy', 'st', 'date', 'phase', 'leg', 'ft', 'meals', 'ac', 'pid', 'contact', 'rating', 'pay', 'by_rank', 'by_name', 'dept', 'at', 'deleted_at'] },
+  gissues: { tab: (r, D) => (kindOfEvent_(D, r.eid) === 'CAT' ? 'CAT_ISSUES' : 'GSE_ISSUES'), tabs: ['GSE_ISSUES', 'CAT_ISSUES'], cols: ['id', 'eid', 'cat', 'issue', 'cause', 'min', 'fix', 'photos', 'by_rank', 'by_name', 'dept', 'at', 'edited_rank', 'edited_name', 'editedDept', 'editedAt', 'deleted_at'] },
+  providers: { tab: () => 'PROVIDERS', cols: ['id', 'kind', 'st', 'name', 'contact', 'services', 'by_rank', 'by_name', 'dept', 'at', 'deleted_at'] },
+  notes: { tab: () => 'NOTES', cols: ['id', 'kind', 'st', 'text', 'by_rank', 'by_name', 'dept', 'at', 'deleted_at'] },
   stations: { tab: () => 'STATIONS', cols: ['id', 'name', 'country'] },
   lists: { tab: () => 'LISTS', cols: ['id', 'values'] },
-  logs: { tab: () => 'LOG', cols: ['id', 'at', 'user', 'dept', 'scope', 'mid', 'fy', 'action', 'target', 'detail', 'owner'] },
+  logs: { tab: () => 'LOG', cols: ['id', 'at', 'user_rank', 'user_name', 'dept', 'scope', 'mid', 'fy', 'action', 'target', 'detail', 'owner'] },
 };
 const ORDER = Object.keys(T);
+/* ยศแยกจากชื่อ-สกุล (ผู้ใช้กำหนด 15 พ.ย. 2026): วันหนึ่งยศเปลี่ยน แต่ชื่อเดิมค้นหาได้
+   - คนที่ Login: ยศ ชื่อ-สกุล และ Username มาจากระบบ Login แยกกันอยู่แล้ว (บันทึก <x>Rank, <x>Name, <x>User)
+   - รายชื่อ MC / ผู้ช่วย MC ที่พิมพ์ในหน้าเว็บ: แยกยศจากข้อความ เช่น "น.ต.สมชาย" → ยศ "น.ต." ชื่อ "สมชาย"
+   - ความเป็นเจ้าของ (ภารกิจที่เปิด ความเห็นที่เขียน) เทียบด้วย Username ยศเปลี่ยนแล้วยังเป็นของคนเดิม */
+const RANK_RE = /^((?:พล\.)?[ก-ฮ]{1,2}\.(?:[ก-ฮ]\.){0,2}(?:หญิง)?|นาย|นางสาว|นาง|คุณ)\s*/;
+function splitRank_(t) {
+  t = String(t || '').trim();
+  const m = RANK_RE.exec(t);
+  return m && m[0].length < t.length ? { rank: m[1], name: t.slice(m[0].length).trim() } : { rank: '', name: t };
+}
+const tidyPerson_ = (t) => { const p = splitRank_(t); return p.rank ? p.rank + ' ' + p.name : p.name; };
+function stamp_(row, key, s) { row[key] = s.name; row[key + 'Rank'] = s.rank; row[key + 'Name'] = s.fname; row[key + 'User'] = s.user; }
+function copyStamp_(row, key, from, fromKey) { ['', 'Rank', 'Name', 'User'].forEach(function (x) { row[key + x] = from[(fromKey || key) + x]; }); }
+// คอลัมน์อ่านง่ายที่คำนวณจากข้อมูล: <x>_rank / <x>_name
+function derived_(r, k) {
+  const m = /^(by|cby|edited|user|mc|amc)_(rank|name)$/.exec(k);
+  if (m && m[1] === 'edited') { const v = r['editedBy' + (m[2] === 'rank' ? 'Rank' : 'Name')]; return v != null && v !== '' ? v : splitRank_(r.editedBy)[m[2]]; }
+  if (!m) return r[k];
+  const key = m[1], part = m[2];
+  if (key === 'mc' || key === 'amc') {
+    const arr = Array.isArray(r[key]) ? r[key] : r[key] ? [r[key]] : [];
+    return arr.map(function (x) { return splitRank_(x)[part]; }).join(', ');
+  }
+  const exact = r[key + (part === 'rank' ? 'Rank' : 'Name')];
+  if (exact != null && exact !== '') return exact;
+  return splitRank_(r[key === 'edited' ? 'editedBy' : key])[part];
+}
 const tabsOf_ = (c) => T[c].tabs || [T[c].tab({})];
 const LIST_IDS = ['pmNames', 'mcNames', 'amcNames', 'cafNames', 'dechoCodes'];
 
@@ -121,8 +148,9 @@ const API = {
 };
 
 /* =========================== ผู้ใช้และสิทธิ์ =========================== */
-function meOut_(s) { return { name: s.name, role: s.role, dept: s.dept, super: s.super, pos: s.pos }; }
+function meOut_(s) { return { name: s.name, rank: s.rank, fname: s.fname, user: s.user, role: s.role, dept: s.dept, super: s.super, pos: s.pos }; }
 const isAdmin_ = (s) => s.role === 'Admin';
+const isMine_ = (row, key, s) => (row[key + 'User'] ? row[key + 'User'] === s.user : row[key] === s.name);
 const canWrite_ = (s) => s.role === 'Admin' || s.role === 'Editor';
 const isProxyFor_ = (s, dk) => SHARED.indexOf(dk) >= 0 && PROXY_FROM.indexOf(s.dept) >= 0;
 const canEditDept_ = (s, dk) => canWrite_(s) && !!dk && (s.dept === dk || isProxyFor_(s, dk));
@@ -139,19 +167,25 @@ const isDelLog_ = (l) => l.action === 'DELETE' || /_DEL$/.test(String(l.action |
 const canSeeDelText_ = (s, l) => l.scope === 'GSE' || l.scope === 'CAT' || isAdmin_(s) || s.dept === l.owner || s.dept === l.scope;
 
 /* สิ่งที่ผู้ใช้คนนี้เห็น: ไม่ส่งแถวที่ลบแล้ว ซ่อนชื่อคนกรอกของฝ่ายอื่น กรองประวัติตามสิทธิ์ */
+const PKEYS = ['by', 'cby', 'edited', 'deleted_by'];
+// Username ของคนอื่นไม่ส่งออกไปหน้าเว็บ (ส่งเฉพาะของตัวเอง ใช้ดูว่ารายการไหนเป็นของเรา)
+function scrubUsers_(o, s) {
+  let c = null;
+  PKEYS.concat(['user']).forEach(function (k) { if (o[k + 'User'] && o[k + 'User'] !== s.user) { c = c || Object.assign({}, o); c[k + 'User'] = ''; } });
+  return c || o;
+}
+function hideNames_(o) { const c = Object.assign({}, o); ['by', 'cby'].forEach(function (k) { c[k] = ''; c[k + 'Rank'] = ''; c[k + 'Name'] = ''; c[k + 'User'] = ''; }); return c; }
 function view_(D, s) {
-  const live = (a) => a.filter(function (x) { return !x.deleted_at; });
+  const live = (a) => a.filter(function (x) { return !x.deleted_at; }).map(function (x) { return scrubUsers_(x, s); });
   const sc = logScopes_(s);
   return {
     missions: live(D.missions),
-    items: live(D.items).map(function (i) {
-      if (canSeeNames_(s, i.dept)) return i;
-      const o = Object.assign({}, i); o.by = ''; o.cby = ''; return o;
-    }),
-    acks: live(D.acks).map(function (a) { if (canSeeNames_(s, a.dept)) return a; const o = Object.assign({}, a); o.by = ''; return o; }),
+    items: live(D.items).map(function (i) { return canSeeNames_(s, i.dept) ? i : hideNames_(i); }),
+    acks: live(D.acks).map(function (a) { return canSeeNames_(s, a.dept) ? a : hideNames_(a); }),
     comments: live(D.comments), events: live(D.events), gissues: live(D.gissues), providers: live(D.providers), notes: live(D.notes),
     stations: D.stations, lists: D.lists,
     logs: D.logs.filter(function (l) { return sc.indexOf(l.scope) >= 0; }).slice(0, 2000).map(function (l) {
+      l = scrubUsers_(l, s);
       if (!isDelLog_(l) || canSeeDelText_(s, l)) return l;
       const o = Object.assign({}, l); o.detail = ''; o.masked = true; return o;
     }),
@@ -179,8 +213,8 @@ function applyOp_(D, op, s, changed) {
     if (c === 'missions' && !isAdmin_(s)) deny('ลบภารกิจได้เฉพาะ Admin');
     if (c === 'items' && !canEditDept_(s, old.dept)) deny('แก้ไขได้เฉพาะข้อของฝ่ายตัวเอง');
     if (c === 'acks' && !(canWrite_(s) && old.dept === s.dept)) deny();
-    if (c === 'comments' && !(old.by === s.name && (old.t === 'g' || canWrite_(s)))) deny('ลบได้เฉพาะความเห็นของตัวเอง');
-    list[at] = Object.assign({}, old, { deleted_at: now, deleted_by: s.name });
+    if (c === 'comments' && !(isMine_(old, 'by', s) && (old.t === 'g' || canWrite_(s)))) deny('ลบได้เฉพาะความเห็นของตัวเอง');
+    list[at] = Object.assign({}, old, { deleted_at: now }); stamp_(list[at], 'deleted_by', s);
     changed[c + ':' + id] = list[at];
     return;
   }
@@ -191,12 +225,14 @@ function applyOp_(D, op, s, changed) {
   if (old && old.deleted_at) deny('รายการนี้ถูกลบไปแล้ว');
 
   if (c === 'missions') {
-    if (!old) { if (!canWrite_(s)) deny('เปิดภารกิจได้เฉพาะ Editor และ Admin'); row.by = s.name; row.at = now; }
+    if (!old) { if (!canWrite_(s)) deny('เปิดภารกิจได้เฉพาะ Editor และ Admin'); stamp_(row, 'by', s); row.at = now; }
     else {
-      if (!(isAdmin_(s) || (canWrite_(s) && old.by === s.name))) deny('แก้ข้อมูลภารกิจได้เฉพาะ Admin หรือคนที่เปิดภารกิจ');
-      row.by = old.by; row.at = old.at;
+      if (!(isAdmin_(s) || (canWrite_(s) && isMine_(old, 'by', s)))) deny('แก้ข้อมูลภารกิจได้เฉพาะ Admin หรือคนที่เปิดภารกิจ');
+      copyStamp_(row, 'by', old); row.at = old.at;
     }
     row.fy = fyOf_(row.start);
+    row.mc = (Array.isArray(row.mc) ? row.mc : row.mc ? [row.mc] : []).map(tidyPerson_).filter(Boolean);
+    row.amc = (Array.isArray(row.amc) ? row.amc : row.amc ? [row.amc] : []).map(tidyPerson_).filter(Boolean);
   } else if (c === 'items') {
     if (DEPTS.indexOf(row.dept) < 0) throw err_('bad_request', 'ไม่รู้จักฝ่าย');
     if (old && old.dept !== row.dept) deny('ย้ายฝ่ายของข้อไม่ได้');
@@ -205,27 +241,28 @@ function applyOp_(D, op, s, changed) {
     if (old) {
       const ov = Number(old.ver || 1), nv = Number(row.ver || 1);
       if (nv !== ov && nv !== ov + 1) { const e = err_('conflict', 'มีคนแก้ข้อนี้ไปก่อนแล้ว โหลดข้อมูลล่าสุดให้แล้ว'); e.row = old; throw e; }
-      row.cby = old.cby || old.by; row.cdept = old.cdept || old.dept; row.proxy = old.proxy;
+      if (old.cby) copyStamp_(row, 'cby', old); else copyStamp_(row, 'cby', old, 'by');
+      row.cdept = old.cdept || old.dept; row.proxy = old.proxy;
     } else {
-      row.cby = s.name; row.cdept = s.dept; row.proxy = row.dept !== s.dept ? s.dept : undefined; row.ver = 1;
+      stamp_(row, 'cby', s); row.cdept = s.dept; row.proxy = row.dept !== s.dept ? s.dept : undefined; row.ver = 1;
     }
-    row.by = s.name; row.at = now;
+    stamp_(row, 'by', s); row.at = now;
     row.fy = fyOf_((missionOf_(D, row.mid) || {}).start);
     row.photos = savePhotos_(row.photos, old && old.photos, missionOf_(D, row.mid), row.dept + '_' + row.id);
   } else if (c === 'acks') {
     if (!(canWrite_(s) && row.dept === s.dept)) deny('ยืนยันได้เฉพาะฝ่ายตัวเอง');
-    row.id = row.mid + '|' + row.dept; row.by = s.name; row.at = now; row.fy = fyOf_((missionOf_(D, row.mid) || {}).start);
+    row.id = row.mid + '|' + row.dept; stamp_(row, 'by', s); row.at = now; row.fy = fyOf_((missionOf_(D, row.mid) || {}).start);
   } else if (c === 'comments') {
     if (old) deny('แก้ความเห็นไม่ได้ ลบแล้วเขียนใหม่');
     if (row.t !== 'g' && !canWrite_(s)) deny('Viewer แสดงความเห็นในข้อของฝ่ายไม่ได้');
-    row.by = s.name; row.dept = s.dept; row.at = now; row.text = String(row.text || '').slice(0, 3000);
+    stamp_(row, 'by', s); row.dept = s.dept; row.at = now; row.text = String(row.text || '').slice(0, 3000);
   } else if (c === 'events' || c === 'providers' || c === 'notes') {
     // GSE / Catering: ทุกคนที่เข้าเว็บได้ กรอกและแก้ได้ (ผู้ใช้กำหนด) ชื่อคนกรอกครั้งแรกคงไว้
-    if (old) { row.by = old.by; row.dept = old.dept; row.at = old.at; } else { row.by = s.name; row.dept = s.dept; row.at = now; }
+    if (old) { copyStamp_(row, 'by', old); row.dept = old.dept; row.at = old.at; } else { stamp_(row, 'by', s); row.dept = s.dept; row.at = now; }
     if (c === 'events') row.fy = fyOf_(row.date);
   } else if (c === 'gissues') {
-    if (old) { row.by = old.by; row.dept = old.dept; row.at = old.at; row.editedBy = s.name; row.editedDept = s.dept; row.editedAt = now; }
-    else { row.by = s.name; row.dept = s.dept; row.at = now; delete row.editedBy; delete row.editedDept; delete row.editedAt; }
+    if (old) { copyStamp_(row, 'by', old); row.dept = old.dept; row.at = old.at; stamp_(row, 'editedBy', s); row.editedDept = s.dept; row.editedAt = now; }
+    else { stamp_(row, 'by', s); row.dept = s.dept; row.at = now; ['editedBy', 'editedByRank', 'editedByName', 'editedByUser', 'editedDept', 'editedAt'].forEach(function (k) { delete row[k]; }); }
     const ev = D.events.find(function (x) { return x.id === row.eid; });
     row.photos = savePhotos_(row.photos, old && old.photos, ev && missionOf_(D, ev.mid), (ev && ev.kind === 'CAT' ? 'CAT_' : 'GSE_') + (ev ? ev.st : '') + '_' + row.id, ev);
   } else if (c === 'stations') {
@@ -234,12 +271,13 @@ function applyOp_(D, op, s, changed) {
     if (LIST_IDS.indexOf(id) < 0) throw err_('bad_request', 'ไม่รู้จักรายชื่อ');
     if (!canWrite_(s)) deny();
     row.values = (Array.isArray(row.values) ? row.values : []).map(String).slice(0, 300);
+    if (id === 'mcNames' || id === 'amcNames' || id === 'cafNames') row.values = row.values.map(tidyPerson_);
   } else if (c === 'logs') {
     if (old) return;                                            // ประวัติเพิ่มอย่างเดียว
     const scopes = DEPTS.concat(['GSE', 'CAT', 'MISSION']);
     if (scopes.indexOf(row.scope) < 0) throw err_('bad_request', 'ไม่รู้จักส่วนของประวัติ');
     if (/^EXPORT/.test(String(row.action)) && !canWrite_(s)) deny('Viewer ส่งออกไฟล์ไม่ได้');
-    row = { id: id, at: now, user: s.name, dept: s.dept, scope: row.scope, mid: row.mid || null, action: String(row.action || '').slice(0, 40),
+    row = { id: id, at: now, user: s.name, userRank: s.rank, userName: s.fname, userUser: s.user, dept: s.dept, scope: row.scope, mid: row.mid || null, action: String(row.action || '').slice(0, 40),
       target: String(row.target || '').slice(0, 200), detail: String(row.detail || '').slice(0, 800), owner: row.owner || undefined };
     row.fy = fyOf_((missionOf_(D, row.mid) || {}).start);
     list.unshift(row); changed[c + ':' + id] = row;
@@ -337,7 +375,7 @@ function save_(D, changed) {
 function rowVals_(c, r) {
   const cols = T[c].cols;
   return cols.map(function (k) {
-    let v = r[k];
+    let v = derived_(r, k);
     if (v == null) return '';
     if (Array.isArray(v)) v = v.map(function (x) { return typeof x === 'string' && x.length > 60 ? x.slice(0, 60) + '…' : x; }).join(', ');
     else if (typeof v === 'object') v = JSON.stringify(v);
@@ -346,11 +384,20 @@ function rowVals_(c, r) {
     return v.length > 4000 ? v.slice(0, 4000) + '…' : v;
   }).concat([JSON.stringify(r)]);
 }
+// หัวคอลัมน์ภาษาไทย (ระบบอ่านตามลำดับคอลัมน์ ไม่ได้อ่านหัว)
+const HEAD_TH = { id: 'รหัส', fy: 'ปีงบ', type: 'ประเภท', sub: 'ประเภทย่อย', title: 'ชื่อภารกิจ', start: 'วันเริ่ม', end: 'วันจบ', ac: 'เครื่อง', route: 'เส้นทางบิน',
+  mc_rank: 'ยศ MC', mc_name: 'ชื่อ MC', amc_rank: 'ยศ ผู้ช่วย MC', amc_name: 'ชื่อ ผู้ช่วย MC', depts: 'ฝ่ายที่ร่วมภารกิจ',
+  by_rank: 'ยศ ผู้บันทึก', by_name: 'ชื่อ-สกุล ผู้บันทึก', cby_rank: 'ยศ ผู้กรอก', cby_name: 'ชื่อ-สกุล ผู้กรอก', edited_rank: 'ยศ ผู้แก้ล่าสุด', edited_name: 'ชื่อ-สกุล ผู้แก้ล่าสุด',
+  user_rank: 'ยศ', user_name: 'ชื่อ-สกุล', at: 'เวลา', ver: 'ฉบับ', deleted_at: 'ลบเมื่อ', mid: 'รหัสภารกิจ', dept: 'ฝ่าย', issue: 'ข้อขัดข้อง', rec: 'ข้อเสนอแนะ และแนวทางการแก้ไข',
+  photos: 'รูป (Drive)', repeatOf: 'เคยเกิดแล้ว (รหัสข้อ)', proxy: 'กรอกแทนโดยฝ่าย', cdept: 'ฝ่ายผู้กรอก', t: 'ชนิด', tid: 'รหัสข้อ', text: 'ความเห็น', kind: 'ชนิด', st: 'Station',
+  date: 'วันที่', phase: 'ขา', leg: 'ขาบิน', ft: 'Flight Time', meals: 'จำนวนมื้อ', pid: 'รหัสผู้ให้บริการ', contact: 'ผู้ประสานงาน', rating: 'คะแนน', pay: 'การจ่ายเงิน',
+  eid: 'รหัสบันทึก', cat: 'รายการ', cause: 'สาเหตุ', min: 'เสียเวลา (นาที)', fix: 'แนวทางแก้ไข', editedDept: 'ฝ่ายผู้แก้', editedAt: 'แก้เมื่อ', name: 'ชื่อ', services: 'บริการ',
+  country: 'ประเทศ', values: 'รายชื่อ', scope: 'ส่วน', action: 'การกระทำ', target: 'เรื่อง', detail: 'รายละเอียด', owner: 'ฝ่ายเจ้าของข้อ' };
 function sheet_(ss, name, cols) {
   let sh = ss.getSheetByName(name);
   if (!sh) {
     sh = ss.insertSheet(name);
-    sh.getRange(1, 1, 1, cols.length + 1).setValues([cols.concat(['json'])]).setFontWeight('bold').setBackground('#1f3a68').setFontColor('#ffffff');
+    sh.getRange(1, 1, 1, cols.length + 1).setValues([cols.map(function (k) { return HEAD_TH[k] || k; }).concat(['json (ระบบใช้ ห้ามแก้)'])]).setFontWeight('bold').setBackground('#1f3a68').setFontColor('#ffffff');
     sh.setFrozenRows(1);
   }
   return sh;
@@ -410,7 +457,8 @@ function auth_(pass, fresh) {
   }
   const u = j.user || {}, role = String(j.role || '');
   const name = ((String(u.rank || '').trim() + ' ' + String(u.name || '').trim()).trim() || String(u.username || '')).slice(0, 80);
-  const who = { name: name, role: role, dept: deptOfPos_(u.pos), pos: String(u.pos || '').slice(0, 40), super: j.super === true };
+  const who = { name: name, rank: String(u.rank || '').trim().slice(0, 30), fname: String(u.name || '').trim().slice(0, 80), user: String(u.username || '').slice(0, 40),
+    role: role, dept: deptOfPos_(u.pos), pos: String(u.pos || '').slice(0, 40), super: j.super === true };
   const left = Math.floor((Number(j.expiresAt) - Date.now()) / 1000);
   if (left > 1) cache.put('who:' + key, JSON.stringify(who), Math.min(CFG.CHECK_SEC, left));
   return who;
@@ -443,7 +491,7 @@ function setup() {
   const D = load_(true);
   if (!D.missions.length && idOf_(SETUP.oldSheet)) {
     const n = importOld_(SpreadsheetApp.openById(idOf_(SETUP.oldSheet)), D);
-    Logger.log('นำข้อมูลเดิมเข้าแล้ว: ' + n.missions + ' ภารกิจ ' + n.items + ' ข้อ');
+    Logger.log('นำข้อมูลเดิมเข้าแล้ว: ' + n.missions + ' ภารกิจ ' + n.items + ' ข้อ · GSE ' + n.gse + ' ข้อ');
   } else if (D.missions.length) Logger.log('ชีตมีข้อมูลแล้ว ' + D.missions.length + ' ภารกิจ (ไม่นำข้อมูลเดิมเข้าซ้ำ)');
   const lists = {};
   [['mcNames', SETUP.mcNames], ['amcNames', SETUP.amcNames]].forEach(function (x) {
@@ -483,7 +531,7 @@ function guessType_(title) {
     แท็บ ภาพรวม นำเข้าเป็นของฝ่ายนักบิน เฉพาะข้อที่ไม่ซ้ำกับแท็บนักบิน · ภารกิจเดิมถือว่าทุกฝ่ายตรวจแล้ว */
 function importOld_(old, D) {
   const now = new Date().toISOString(), BY = 'นำเข้าจากชีตเดิม';
-  const byKey = {}, missions = [], items = [], acks = [];
+  const byKey = {}, missions = [], items = [], acks = [], events = [], gissues = [], stations = [];
   let seq = 0;
   OLD_TABS.forEach(function (td) {
     const sh = old.getSheetByName(td[0]); if (!sh) return;
@@ -507,7 +555,21 @@ function importOld_(old, D) {
       }
       if (!m || (!issue && !rec)) { if (!date && !issue && !rec) last = null; return; }
       if (!issue && last) { last.rec = last.rec ? last.rec + '\n' + rec : rec; return; }
-      if (td[0] === 'ภาพรวม' && items.some(function (x) { return x.mid === m.id && x.dept === 'NB' && x.issue === issue; })) { last = null; return; }
+      if (td[0] === 'ภาพรวม') {
+        // แท็บภาพรวม: ข้อที่มีอยู่แล้วในแท็บฝ่าย ข้าม · ข้อที่ระบุสนามบิน (รหัส ICAO) เป็นข้อขัดข้อง GSE ของภารกิจนั้นที่ Station นั้น
+        if (items.some(function (x) { return x.mid === m.id && x.issue === issue; })) { last = null; return; }
+        const icao = /\b([A-Z]{4})\b/.exec(issue);
+        if (icao) {
+          const st = icao[1], eid = 'e' + m.id + '_' + st;
+          let ev = events.find(function (x) { return x.id === eid; });
+          if (!ev) { ev = { id: eid, kind: 'GSE', mid: m.id, st: st, date: m.start, phase: 'ARR', items: {}, by: BY, dept: '', at: now }; events.push(ev); }
+          seq++;
+          last = { id: 'g' + ('000' + seq).slice(-4), eid: eid, cat: 'ข้อขัดข้องอื่น ๆ', issue: issue, cause: '', min: 0, fix: rec, photos: [], by: BY, dept: '', at: now };
+          gissues.push(last);
+          if (stations.indexOf(st) < 0) stations.push(st);
+          return;
+        }
+      }
       seq++;
       last = { id: 'i' + ('000' + seq).slice(-4) + '_' + td[1], mid: m.id, dept: td[1], issue: issue, rec: rec, photos: [], repeatOf: null, cby: BY, cdept: td[1], by: BY, at: now, ver: 1 };
       items.push(last);
@@ -524,8 +586,11 @@ function importOld_(old, D) {
   missions.forEach(function (m) { D.missions.push(m); changed['missions:' + m.id] = m; });
   items.forEach(function (i) { D.items.push(i); changed['items:' + i.id] = i; });
   acks.forEach(function (a) { D.acks.push(a); changed['acks:' + a.id] = a; });
-  const lg = { id: 'l_import', at: now, user: 'ระบบ', dept: '', scope: 'MISSION', mid: null, action: 'IMPORT', target: 'AAR SUMMARY ALL MISSION', detail: 'นำเข้าข้อมูลเดิม ' + missions.length + ' ภารกิจ ' + items.length + ' ข้อ' };
+  events.forEach(function (e) { e.fy = fyOf_(e.date); D.events.push(e); changed['events:' + e.id] = e; });
+  gissues.forEach(function (g) { D.gissues.push(g); changed['gissues:' + g.id] = g; });
+  stations.forEach(function (st) { if (!D.stations[st]) { D.stations[st] = { name: st, country: '' }; changed['stations:' + st] = { id: st, name: st, country: '' }; } });
+  const lg = { id: 'l_import', at: now, user: 'ระบบ', dept: '', scope: 'MISSION', mid: null, action: 'IMPORT', target: 'AAR SUMMARY ALL MISSION', detail: 'นำเข้าข้อมูลเดิม ' + missions.length + ' ภารกิจ ' + items.length + ' ข้อ · GSE ' + gissues.length + ' ข้อ' };
   D.logs.unshift(lg); changed['logs:' + lg.id] = lg;
   save_(D, changed);
-  return { missions: missions.length, items: items.length };
+  return { missions: missions.length, items: items.length, gse: gissues.length };
 }

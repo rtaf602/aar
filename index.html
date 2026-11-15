@@ -896,7 +896,7 @@ let CMOPEN = null; // ช่องพิมพ์ความเห็นที�
 const cmtsOf = (t, tid) => (S.comments || []).filter(c => c.t === t && c.tid === tid).sort((a, b) => a.at.localeCompare(b.at));
 function cmtBlock(t, tid) {
   const list = cmtsOf(t, tid), key = t + ':' + tid, open = CMOPEN === key;
-  const items = list.map(c => `<li><div class="cm-h"><b>${esc(c.by)}</b> <span class="badge">${esc(deptOf(c.dept).s)}</span> <span class="muted">${esc(fmtTS(c.at))}</span>${(t === 'g' ? canWriteG() : canWrite()) && c.by === me() ? `<button class="btn link cm-del" data-act="cm-del" data-cid="${c.id}">ลบ</button>` : ''}</div><p class="pre">${esc(c.text)}</p></li>`).join('');
+  const items = list.map(c => `<li><div class="cm-h"><b>${esc(c.by)}</b> <span class="badge">${esc(deptOf(c.dept).s)}</span> <span class="muted">${esc(fmtTS(c.at))}</span>${(t === 'g' ? canWriteG() : canWrite()) && isMineBy(c) ? `<button class="btn link cm-del" data-act="cm-del" data-cid="${c.id}">ลบ</button>` : ''}</div><p class="pre">${esc(c.text)}</p></li>`).join('');
   return `<div class="cmts">
     ${list.length ? `<div class="cm-title">💬 ความเห็นเพิ่มเติม ${list.length}</div><ul>${items}</ul>` : ''}
     ${(t === 'g' ? canWriteG() : canWrite()) ? (open ? `<div class="cm-form"><textarea id="cm-${tid}" data-keep placeholder="เสนอแนะเพิ่มเติม เช่น วิธีแก้ที่ฝ่ายคุณเคยใช้ หรือสิ่งที่ควรเตรียมครั้งหน้า"></textarea><div class="row" style="gap:6px"><span class="err" id="cm-err-${tid}" hidden></span><span style="flex:1"></span><button class="btn sm" data-act="cm-open" data-k="">ยกเลิก</button><button class="btn sm primary" data-act="cm-save" data-t="${t}" data-tid="${tid}">ส่งความเห็น</button></div></div>`
@@ -927,7 +927,8 @@ const isAdmin = () => U.role === 'Admin';
 // ชื่อคนกรอก / แก้ไขล่าสุด / ยืนยัน ของข้อในแต่ละฝ่าย: Admin เห็นทุกฝ่าย · Editor และ Viewer เห็นเฉพาะฝ่ายตัวเอง · TG และ พ. (กรอกร่วมกัน) ทุกคนเห็น · GSE / Catering ทุกคนเห็นเสมอ
 const canSeeNames = dk => isAdmin() || U.dept === dk || ['TG', 'MD'].includes(dk);
 // เปิดภารกิจ: Editor และ Admin · แก้ข้อมูลภารกิจ: Admin ทุกภารกิจ, Editor เฉพาะภารกิจที่ตัวเองเปิด
-const canEditMission = m => isAdmin() || (canWrite() && !!m && m.by === me());
+const isMineBy = (o, key = 'by') => !!o && (o[key + 'User'] ? o[key + 'User'] === U.user : o[key] === me());
+const canEditMission = m => isAdmin() || (canWrite() && isMineBy(m));
 function logScopes() {
   // ทุกคนเห็นฝ่ายตัวเอง + TG + พ. + GSE + Catering · Editor/Admin เห็นการเปิด/แก้ภารกิจ · Admin เห็นประวัติทุกฝ่าย
   const s = [U.dept];
@@ -2563,7 +2564,7 @@ $('#lockGo').addEventListener('click', () => { if (AUTH) location.href = AUTH.lo
 $('#lockOut').addEventListener('click', () => { if (AUTH) AUTH.signOut(); });
 function setMe(m) {
   if (!m) return;
-  U = { dept: m.dept || '', role: m.role || 'Viewer', name: m.name || '', super: !!m.super };
+  U = { dept: m.dept || '', role: m.role || 'Viewer', name: m.name || '', user: m.user || '', super: !!m.super };
 }
 function uiBusy() {
   const a = document.activeElement;
