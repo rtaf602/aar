@@ -1,7 +1,7 @@
 // ทดสอบระบบหลังบ้านของ AAR อย่างเดียว (ไม่มีเบราว์เซอร์): การ Login ผ่านระบบกลาง สิทธิ์ทุกข้อ การนำข้อมูลเดิมเข้า รูปภาพ
 // ใช้: EADMIN_DIR=../eadmin APP_DIR=../app node test/aar_api.mjs
 import vm from 'node:vm';
-import { site, sessions, aarPost, passOf } from './aar_serve.mjs';
+import { site, sessions, aarPost, passOf, post } from './aar_serve.mjs';
 const bad = [];
 const check = (name, cond, got) => { console.log((cond ? 'ok   ' : 'FAIL ') + name + (cond ? '' : '  → ' + String(JSON.stringify(got)).slice(0, 400))); if (!cond) bad.push(name); };
 const ce = (r) => (r.error || {}).code;
@@ -54,7 +54,16 @@ check('Viewer writes no item', ce(write('phum', [{ c: 'items', op: 'put', row: i
 const w3 = write('somchai', [{ c: 'items', op: 'put', row: item('iTG', 'TG') }]);
 const iTG = w3.data && w3.data.items.find((i) => i.id === 'iTG');
 check('a crew department writes for TG / พ. (proxy marked)', iTG && iTG.proxy === 'CH' && iTG.cdept === 'CH', iTG || w3);
-check('Admin cannot edit another department\'s item', ce(write('chan', [{ c: 'items', op: 'put', row: item('iCH', 'CH') }])) === 'forbidden');
+const refOf = (u) => post('admin.list', { session: S.chan.token }).people.find((p) => p.username === u).ref;
+post('admin.web', { session: S.chan.token, ref: refOf('thana_t'), web: { WEB15: 'Admin' } });
+const PA = passOf(S.thana.token);
+check('an Admin of AAR who is not the main admin: cannot edit another department\'s item, nor confirm for it', ce(aarPost({ action: 'write', pass: PA, ops: [{ c: 'items', op: 'put', row: item('iCH0', 'CH') }] })) === 'forbidden' && ce(aarPost({ action: 'write', pass: PA, ops: [{ c: 'acks', op: 'put', row: { mid: 'mT1', dept: 'CH' } }] })) === 'forbidden');
+post('admin.web', { session: S.chan.token, ref: refOf('thana_t'), web: { WEB15: 'Editor' } });
+P.thana = passOf(S.thana.token);
+const wS = write('chan', [{ c: 'items', op: 'put', row: item('iCH', 'CH') }]);
+check('the main admin edits / adds an item of any department', !wS.error && wS.data.items.some((i) => i.id === 'iCH' && i.dept === 'CH'), wS.error);
+check('the main admin confirms "no issues" for another department', !write('chan', [{ c: 'acks', op: 'put', row: { mid: 'mT1', dept: 'KSO' } }]).error && sync('thana').data.acks.some((a) => a.mid === 'mT1' && a.dept === 'KSO'));
+check('…and deletes an item of another department', !write('chan', [{ c: 'items', op: 'del', id: 'iCH' }]).error);
 const w4 = write('thana', [{ c: 'items', op: 'put', row: Object.assign({}, iA, { issue: 'แก้ครั้งที่ 2', ver: 2 }) }]);
 check('edit with the next version: ok, creator kept', !w4.error && w4.data.items.find((i) => i.id === 'iA').cby === 'น.อ. ธนา ทดลองกิจ');
 const w5 = write('thana', [{ c: 'items', op: 'put', row: Object.assign({}, iA, { issue: 'แก้จากหน้าเก่า', ver: 5 }) }]);
