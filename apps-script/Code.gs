@@ -153,7 +153,10 @@ const isAdmin_ = (s) => s.role === 'Admin';
 const isMine_ = (row, key, s) => (row[key + 'User'] ? row[key + 'User'] === s.user : row[key] === s.name);
 const canWrite_ = (s) => s.role === 'Admin' || s.role === 'Editor';
 const isProxyFor_ = (s, dk) => SHARED.indexOf(dk) >= 0 && PROXY_FROM.indexOf(s.dept) >= 0;
-const canEditDept_ = (s, dk) => canWrite_(s) && !!dk && (s.dept === dk || isProxyFor_(s, dk));
+// Admin หลักของระบบ Login (super) แก้/ลบข้อของทุกฝ่าย และยืนยัน "ไม่มีข้อขัดข้อง" แทนทุกฝ่ายได้ (ผู้ใช้กำหนด 15 พ.ย. 2026)
+const canEditDept_ = (s, dk) => canWrite_(s) && !!dk && (s.dept === dk || isProxyFor_(s, dk) || s.super === true);
+// ยืนยัน "ไม่มีข้อขัดข้อง" แทนฝ่ายอื่น: Admin ของเว็บ AAR และ Admin หลัก (ผู้ใช้กำหนด 15 พ.ย. 2026) · แก้ข้อของฝ่ายอื่นยังเป็นของ Admin หลักเท่านั้น
+const canAck_ = (s, dk) => canWrite_(s) && !!dk && (s.dept === dk || s.role === 'Admin' || s.super === true);
 const canSeeNames_ = (s, dk) => isAdmin_(s) || s.dept === dk || SHARED.indexOf(dk) >= 0;
 function logScopes_(s) {
   const sc = s.dept ? [s.dept] : [];
@@ -212,7 +215,7 @@ function applyOp_(D, op, s, changed) {
     if (c === 'logs' || c === 'stations' || c === 'lists') deny();
     if (c === 'missions' && !isAdmin_(s)) deny('ลบภารกิจได้เฉพาะ Admin');
     if (c === 'items' && !canEditDept_(s, old.dept)) deny('แก้ไขได้เฉพาะข้อของฝ่ายตัวเอง');
-    if (c === 'acks' && !(canWrite_(s) && old.dept === s.dept)) deny();
+    if (c === 'acks' && !canAck_(s, old.dept)) deny();
     if (c === 'comments' && !(isMine_(old, 'by', s) && (old.t === 'g' || canWrite_(s)))) deny('ลบได้เฉพาะความเห็นของตัวเอง');
     list[at] = Object.assign({}, old, { deleted_at: now }); stamp_(list[at], 'deleted_by', s);
     changed[c + ':' + id] = list[at];
@@ -250,7 +253,8 @@ function applyOp_(D, op, s, changed) {
     row.fy = fyOf_((missionOf_(D, row.mid) || {}).start);
     row.photos = savePhotos_(row.photos, old && old.photos, missionOf_(D, row.mid), row.dept + '_' + row.id);
   } else if (c === 'acks') {
-    if (!(canWrite_(s) && row.dept === s.dept)) deny('ยืนยันได้เฉพาะฝ่ายตัวเอง');
+    if (DEPTS.indexOf(row.dept) < 0) throw err_('bad_request', 'ไม่รู้จักฝ่าย');
+    if (!canAck_(s, row.dept)) deny('ยืนยันได้เฉพาะฝ่ายตัวเอง');
     row.id = row.mid + '|' + row.dept; stamp_(row, 'by', s); row.at = now; row.fy = fyOf_((missionOf_(D, row.mid) || {}).start);
   } else if (c === 'comments') {
     if (old) deny('แก้ความเห็นไม่ได้ ลบแล้วเขียนใหม่');
