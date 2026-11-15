@@ -155,7 +155,8 @@ const canWrite_ = (s) => s.role === 'Admin' || s.role === 'Editor';
 const isProxyFor_ = (s, dk) => SHARED.indexOf(dk) >= 0 && PROXY_FROM.indexOf(s.dept) >= 0;
 // Admin หลักของระบบ Login (super) แก้/ลบข้อของทุกฝ่าย และยืนยัน "ไม่มีข้อขัดข้อง" แทนทุกฝ่ายได้ (ผู้ใช้กำหนด 15 พ.ย. 2026)
 const canEditDept_ = (s, dk) => canWrite_(s) && !!dk && (s.dept === dk || isProxyFor_(s, dk) || s.super === true);
-const canAck_ = (s, dk) => canWrite_(s) && !!dk && (s.dept === dk || s.super === true);
+// ยืนยัน "ไม่มีข้อขัดข้อง" แทนฝ่ายอื่น: Admin ของเว็บ AAR และ Admin หลัก (ผู้ใช้กำหนด 15 พ.ย. 2026) · แก้ข้อของฝ่ายอื่นยังเป็นของ Admin หลักเท่านั้น
+const canAck_ = (s, dk) => canWrite_(s) && !!dk && (s.dept === dk || s.role === 'Admin' || s.super === true);
 const canSeeNames_ = (s, dk) => isAdmin_(s) || s.dept === dk || SHARED.indexOf(dk) >= 0;
 function logScopes_(s) {
   const sc = s.dept ? [s.dept] : [];

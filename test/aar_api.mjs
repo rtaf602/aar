@@ -57,7 +57,9 @@ check('a crew department writes for TG / พ. (proxy marked)', iTG && iTG.proxy 
 const refOf = (u) => post('admin.list', { session: S.chan.token }).people.find((p) => p.username === u).ref;
 post('admin.web', { session: S.chan.token, ref: refOf('thana_t'), web: { WEB15: 'Admin' } });
 const PA = passOf(S.thana.token);
-check('an Admin of AAR who is not the main admin: cannot edit another department\'s item, nor confirm for it', ce(aarPost({ action: 'write', pass: PA, ops: [{ c: 'items', op: 'put', row: item('iCH0', 'CH') }] })) === 'forbidden' && ce(aarPost({ action: 'write', pass: PA, ops: [{ c: 'acks', op: 'put', row: { mid: 'mT1', dept: 'CH' } }] })) === 'forbidden');
+check('an Admin of AAR who is not the main admin: cannot edit another department\'s item', ce(aarPost({ action: 'write', pass: PA, ops: [{ c: 'items', op: 'put', row: item('iCH0', 'CH') }] })) === 'forbidden');
+check('…but confirms "no issues" for another department', !aarPost({ action: 'write', pass: PA, ops: [{ c: 'acks', op: 'put', row: { mid: 'mT1', dept: 'CH' } }] }).error);
+check('an Editor cannot confirm for another department', ce(write('kitti', [{ c: 'acks', op: 'put', row: { mid: 'mT1', dept: 'PB' } }])) === 'forbidden');
 post('admin.web', { session: S.chan.token, ref: refOf('thana_t'), web: { WEB15: 'Editor' } });
 P.thana = passOf(S.thana.token);
 const wS = write('chan', [{ c: 'items', op: 'put', row: item('iCH', 'CH') }]);

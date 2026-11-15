@@ -916,7 +916,7 @@ const PROXY_FROM = ['NB', 'CH', 'SO', 'KSO', 'PB'];
 const isProxyFor = dk => SHARED_DEPTS.includes(dk) && PROXY_FROM.includes(U.dept);
 // Admin หลัก (super) แก้/ลบข้อของทุกฝ่าย และยืนยันแทนทุกฝ่ายได้ (ตรวจจริงที่ Apps Script)
 const canEditDept = dk => canWrite() && (U.dept === dk || isProxyFor(dk) || !!U.super);
-const canAck = dk => canWrite() && (U.dept === dk || !!U.super);
+const canAck = dk => canWrite() && (U.dept === dk || isAdmin() || !!U.super);
 // บันทึกประวัติในฝ่ายเจ้าของข้อ และถ้ากรอกแทน บันทึกในฝ่ายคนกรอกด้วย
 function logItem(dk, action, target, detail, owner) {
   // ประวัติ TG / พ. ทุกฝ่ายเห็นอยู่แล้ว จึงบันทึกที่เดียว พร้อมบอกว่าฝ่ายไหนกรอกแทน
@@ -1328,7 +1328,7 @@ function viewMission(id) {
 function ackBox(m, dk) {
   const st = deptStatus(m, dk);
   if (st.s === 'none') return `<div class="ackbox done"><div><b>✓ ฝ่าย${esc(deptOf(dk).n)}ยืนยันแล้วว่า ไม่มีข้อขัดข้อง</b><div class="small muted">โดย ${esc(st.a.by)} · ${esc(fmtTS(st.a.at))}</div></div><button class="btn sm" data-act="unack" data-mid="${m.id}" data-dept="${dk}">ยกเลิกการยืนยัน / มีข้อที่ต้องกรอก</button></div>`;
-  return `<div class="ackbox"><div><b>${dk === U.dept ? 'ฝ่ายคุณไม่มีข้อขัดข้องในภารกิจนี้?' : 'ยืนยันแทนฝ่าย' + esc(deptOf(dk).n) + ': ไม่มีข้อขัดข้อง? (Admin หลัก)'}</b><div class="small muted">กดยืนยันเพื่อแจ้งว่าเข้ามาตรวจแล้ว · ถ้ามีข้อขัดข้อง ให้กรอกในช่องด้านล่างแทน</div></div><button class="btn okbtn" data-act="ack" data-mid="${m.id}" data-dept="${dk}">✓ ยืนยัน: ไม่มีข้อขัดข้อง</button></div>`;
+  return `<div class="ackbox"><div><b>${dk === U.dept ? 'ฝ่ายคุณไม่มีข้อขัดข้องในภารกิจนี้?' : 'ยืนยันแทนฝ่าย' + esc(deptOf(dk).n) + ': ไม่มีข้อขัดข้อง? (' + (U.super ? 'Admin หลัก' : 'Admin') + ')'}</b><div class="small muted">กดยืนยันเพื่อแจ้งว่าเข้ามาตรวจแล้ว · ถ้ามีข้อขัดข้อง ให้กรอกในช่องด้านล่างแทน</div></div><button class="btn okbtn" data-act="ack" data-mid="${m.id}" data-dept="${dk}">✓ ยืนยัน: ไม่มีข้อขัดข้อง</button></div>`;
 }
 function ackStrip(m) {
   const req = mDepts(m); const extra = DEPTS.map(d => d.k).filter(k => !req.includes(k) && itemsOf(m.id, k).length);
@@ -2414,13 +2414,13 @@ const ACT = {
     const m = missionById(d.mid); S.acks = S.acks || [];
     const dk = d.dept || U.dept; if (!canAck(dk)) return;
     if (!ackOf(d.mid, dk)) S.acks.push({ mid: d.mid, dept: dk, by: me(), at: new Date().toISOString() });
-    log(dk, 'ACK', m.title, dk === U.dept ? 'ตรวจแล้ว ไม่มีข้อขัดข้อง' : 'Admin หลักยืนยันแทน: ไม่มีข้อขัดข้อง'); save(); render(); toast('ยืนยันแล้ว ขอบคุณครับ');
+    log(dk, 'ACK', m.title, dk === U.dept ? 'ตรวจแล้ว ไม่มีข้อขัดข้อง' : (U.super ? 'Admin หลัก' : 'Admin') + 'ยืนยันแทน: ไม่มีข้อขัดข้อง'); save(); render(); toast('ยืนยันแล้ว ขอบคุณครับ');
   },
   unack: d => {
     const m = missionById(d.mid);
     const dk = d.dept || U.dept; if (!canAck(dk)) return;
     S.acks = (S.acks || []).filter(a => !(a.mid === d.mid && a.dept === dk));
-    log(dk, 'UNACK', m.title, dk === U.dept ? 'ยกเลิกการยืนยันไม่มีข้อขัดข้อง' : 'Admin หลักยกเลิกการยืนยันแทน'); save(); render();
+    log(dk, 'UNACK', m.title, dk === U.dept ? 'ยกเลิกการยืนยันไม่มีข้อขัดข้อง' : (U.super ? 'Admin หลัก' : 'Admin') + 'ยกเลิกการยืนยันแทน'); save(); render();
     const t = $('#q-issue'); if (t) { t.scrollIntoView({ block: 'center' }); t.focus(); }
   },
   pendf: () => { F.pend = !F.pend; render(); },
