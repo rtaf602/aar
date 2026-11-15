@@ -758,6 +758,27 @@ html { color-scheme: light; } html.dark { color-scheme: dark; }
 .lock-box { max-width: 420px; text-align: center; display: flex; flex-direction: column; gap: 12px; align-items: center; }
 .lock-box h2 { margin: 0; font-size: 1.2rem; }
 .lock-box p { margin: 0; color: var(--muted); }
+
+#savepill { position: fixed; left: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 45; padding: 6px 12px; border-radius: 999px; font-size: 12.5px; background: var(--surface); color: var(--muted); border: 1px solid var(--line); box-shadow: 0 2px 8px rgba(0,0,0,.08); opacity: 0; transform: translateY(6px); transition: opacity .2s, transform .2s; pointer-events: none; }
+#savepill.on { opacity: 1; transform: none; }
+#savepill.done { color: var(--ok); border-color: var(--ok); }
+
+/* จอคอมพิวเตอร์: ใช้พื้นที่เต็มขึ้น (มือถือเหมือนเดิม) */
+@media (min-width: 1100px) {
+  .wrap { max-width: min(1680px, 94vw); padding-left: 24px; padding-right: 24px; }
+  .sheet { max-height: calc(100vh - var(--ops602-h, 0px) - 120px); }
+}
+@media (min-width: 1500px) { body { font-size: 15.5px; } }
+
+
+/* ตารางสรุปบนจอคอม: ให้พื้นที่กับข้อขัดข้อง / ข้อเสนอแนะ */
+@media (min-width: 761px) {
+  .aartbl { table-layout: fixed; width: 100%; }
+  .aartbl.wm th:nth-child(1) { width: 9%; } .aartbl.wm th:nth-child(2) { width: 14%; } .aartbl.wm th:nth-child(3) { width: 11%; }
+  .aartbl.wm th:nth-child(4) { width: 5%; } .aartbl.wm th:nth-child(5) { width: 27%; } .aartbl.wm th:nth-child(6) { width: 28%; } .aartbl.wm th:nth-child(7) { width: 6%; }
+  .aartbl:not(.wm) th:nth-child(1) { width: 6%; } .aartbl:not(.wm) th:nth-child(2) { width: 42%; } .aartbl:not(.wm) th:nth-child(3) { width: 44%; } .aartbl:not(.wm) th:nth-child(4) { width: 8%; }
+  .aartbl td { word-wrap: break-word; }
+}
 </style>
 <script>
 /* ธีม: auto = ตามเวลาเครื่อง (06:00–17:59 สว่าง, นอกนั้นมืด) · light / dark = ผู้ใช้เลือกเอง */
@@ -784,8 +805,8 @@ document.addEventListener('DOMContentLoaded', applyTheme);
 <script src="/eadmin/assets/config.js"></script>
 <script src="/eadmin/assets/app.js"></script>
 <!-- ?v= เปลี่ยนทุกครั้งที่แก้ api.js / config.js เพื่อให้เบราว์เซอร์โหลดไฟล์ใหม่ -->
-<script src="config.js?v=20261115b"></script>
-<script src="api.js?v=20261115b"></script>
+<script src="config.js?v=20261115c"></script>
+<script src="api.js?v=20261115c"></script>
 </head>
 <body>
 
@@ -1175,7 +1196,7 @@ function sheetTable(rows, withMission) {
     }
     k += n;
   }
-  return (withMission ? mobMissionGroups(rows) : '') + `<div class="tblwrap sheet${withMission ? ' desk' : ''}"><table class="tbl"><thead><tr>${withMission ? '<th>ช่วงเวลาที่ปฏิบัติภารกิจ</th><th>ภารกิจ</th><th>เส้นทางบิน</th>' : ''}<th>ฝ่าย</th><th>ข้อขัดข้อง</th><th>ข้อเสนอแนะ และแนวทางการแก้ไข</th><th>จำนวนภารกิจ<br>ที่เกิดซ้ำ</th></tr></thead><tbody>${body}</tbody></table></div>`;
+  return (withMission ? mobMissionGroups(rows) : '') + `<div class="tblwrap sheet${withMission ? ' desk' : ''}"><table class="tbl aartbl${withMission ? ' wm' : ''}"><thead><tr>${withMission ? '<th>ช่วงเวลาที่ปฏิบัติภารกิจ</th><th>ภารกิจ</th><th>เส้นทางบิน</th>' : ''}<th>ฝ่าย</th><th>ข้อขัดข้อง</th><th>ข้อเสนอแนะ และแนวทางการแก้ไข</th><th>จำนวนภารกิจ<br>ที่เกิดซ้ำ</th></tr></thead><tbody>${body}</tbody></table></div>`;
 }
 function groupBy(arr, key) {
   const out = [];
@@ -2042,11 +2063,7 @@ function printPdf(title, head, rows) {
   h1{font-size:14pt;margin:0 0 4pt}p{margin:0 0 8pt;font-size:9pt;color:#444}table{width:100%;border-collapse:collapse;table-layout:fixed}
   th,td{border:.6pt solid #555;padding:4pt 5pt;vertical-align:top;text-align:left;white-space:pre-wrap;word-wrap:break-word}
   th{background:#e8edf5}thead{display:table-header-group}tr{page-break-inside:avoid}
-  col.a{width:11%}col.b{width:17%}col.c{width:12%}col.d{width:5%}col.e{width:28%}col.f{width:27%}
-#savepill { position: fixed; left: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 45; padding: 6px 12px; border-radius: 999px; font-size: 12.5px; background: var(--surface); color: var(--muted); border: 1px solid var(--line); box-shadow: 0 2px 8px rgba(0,0,0,.08); opacity: 0; transform: translateY(6px); transition: opacity .2s, transform .2s; pointer-events: none; }
-#savepill.on { opacity: 1; transform: none; }
-#savepill.done { color: var(--ok); border-color: var(--ok); }
-</style></head><body>
+  col.a{width:11%}col.b{width:17%}col.c{width:12%}col.d{width:5%}col.e{width:28%}col.f{width:27%}</style></head><body>
   <h1>${esc(title)}</h1><p>ส่งออกโดย ${esc(me())} · ${esc(fmtTS(new Date().toISOString()))} · ${rows.length} ข้อ</p>
   <table><colgroup><col class="a"><col class="b"><col class="c"><col class="d"><col class="e"><col class="f"></colgroup>
   <thead><tr>${head.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${expRow(r).map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></body></html>`);
